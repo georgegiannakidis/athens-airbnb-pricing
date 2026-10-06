@@ -15,3 +15,6 @@ Thumbs.db
 
 # Demo self-check output
 docs/.check.json
+
+# Social media assets, kept local
+linkedin/
