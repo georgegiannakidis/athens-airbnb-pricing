@@ -1,0 +1,14 @@
+# Data stays local, see data/README.md
+data/*.csv
+data/*.csv.gz
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
