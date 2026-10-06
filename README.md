@@ -6,11 +6,11 @@ Predicting nightly rates for about 14,000 Athens Airbnb listings, and describing
 
 ## Key findings
 
-**A steep price gradient around the Acropolis.** Entire homes within 500 m have a pre-discount nightly rate roughly **80% to 110% higher** than homes 3 to 5 km away. In the main specification, which adjusts for size, property type, review scores, host behaviour and quote dates, the estimate is +91%. Most of the gradient is gone by 1.5 km (about +25%), and past 3 km distance barely matters.
+**A steep price gradient around the Acropolis.** Entire homes within 500 m have a pre-discount nightly rate roughly **77% to 92% higher** than homes 3 to 5 km away, across the adjusted specifications tested. In the main specification, which adjusts for size, property type, review scores, host behaviour and quote dates, the estimate is +91%. Most of the gradient is gone by 1.5 km (about +25%), and past 3 km distance barely matters.
 
-How sure is that number? The 82% to 100% band on the chart only covers sampling noise *within that one regression*. Refitting under other controls and price cutoffs gives **+77% to +108%**. The estimate is most sensitive to the top price cutoff: dropping the most expensive 5% of homes lowers it to +77%, so luxury homes near the Acropolis drive part of it. This is an **association, not a causal effect**. Views, renovation and amenities are not fully captured, although a rough amenities count barely moves the estimate (+92%).
+How sure is that number? The 82% to 100% band on the chart only covers sampling noise *within that one regression*. Refitting with other controls and price cutoffs gives **+77% to +92%** across the adjusted specifications. The regression with no controls gives +108%, matching the raw medians. The estimate is most sensitive to the top price cutoff: excluding homes above EUR 302 (the 95th percentile of the already trimmed homes, about 6% of eligible entire homes before trimming) lowers it to +77%. So the most expensive homes near the Acropolis account for part of the gap. This is an **association, not a causal effect**. Views, renovation and amenities are not fully captured, although a rough amenities count barely moves the estimate (+92%).
 
-**The model beats the baseline by about 30%, but not evenly.** Errors are smallest for mid-range homes (EUR 60 to 150, around 20%) and much larger at the extremes. Below EUR 60 the model over-predicts 97% of entire rental units and condos. Property type does not explain it, so something outside the data (placeholder prices, long-stay or local arrangements) is likely at play.
+**The model beats the baseline by about 30%, but not evenly.** Errors are smallest for mid-range homes (EUR 60 to 150, around 20%) and much larger at the extremes. Below EUR 60 the model over-predicts 97% of entire rental units and condos. Some of that is expected: any model pulls extreme prices toward typical values, and these listings were selected *for* having low prices. The model systematically over-predicts this segment; the cause remains unclear. Property type does not explain it.
 
 ## Two price targets
 
@@ -54,14 +54,14 @@ Error by price band (`price_list`, LightGBM, out-of-fold):
 - **No leakage:** `price_quote_price_per_night`, `price_quote_total_price`, `price_quote_raw` and `estimated_revenue_l365d` are the price or calculated from it, so they are never features. Neither is the discount flag.
 - **Log target:** errors become relative instead of being dominated by luxury listings.
 - **Grouped by host:** multi-listing hosts often reuse prices, so every host sits entirely inside one fold.
-- **Adjusted gradient:** log-linear regression on entire homes with distance bands plus controls. Intervals from 300 host-level bootstrap resamples. Robustness: refit with no controls, size only, the main controls, main plus amenities count, and three different price cutoffs.
+- **Adjusted gradient:** log-linear regression on entire homes with distance bands plus controls. Intervals from 300 host-level bootstrap resamples. Robustness: refit with no controls, size only, the main controls, main plus amenities count, and three alternative price cutoffs. The cutoff variants use percentiles of the already trimmed homes.
 
 ## Limitations
 
 - **Asking prices, not paid prices.** The model learns what similar hosts ask, not what guests accept.
 - **One quote per listing.** Mostly near-term summer dates, so this is not a seasonal model.
 - **Observed controls only.** The adjusted gradient cannot rule out unmeasured differences such as views or renovation, and the bootstrap interval does not cover the choice of specification.
-- **Weak at the extremes.** Mean error is 37% above EUR 250 and 50% below EUR 60, where the model systematically over-predicts.
+- **Weak at the extremes.** Mean error is 37% above EUR 250 and 50% below EUR 60, where the model systematically over-predicts for reasons not yet identified.
 - 339 of 14,337 listings removed: 192 missing a price or quote, 147 outside EUR 20 to 732 (99th percentile of the list rate).
 - `instant_bookable` is blank for every listing in this scrape.
 

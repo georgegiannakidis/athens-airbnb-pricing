@@ -46,8 +46,10 @@ def parse_quote(raw) -> dict:
 def add_targets(df: pd.DataFrame) -> pd.DataFrame:
     """Two targets for the same quote.
 
-    price_quoted: what Airbnb showed per night, after any length-of-stay discount.
-    price_list:   the host's nightly rate before that discount (subtotal / nights).
+    price_quoted: what Airbnb showed per night. Can include an explicit discount
+                  (mostly labelled "Special offer") or taxes.
+    price_list:   the pre-discount nightly quote rate (quote subtotal / nights),
+                  before explicit discounts, taxes and fees.
     """
     out = df.copy()
     out["price_quoted"] = clean_price(out["price"])
