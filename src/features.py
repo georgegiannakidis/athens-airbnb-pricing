@@ -1,14 +1,15 @@
 """Feature helpers for the Athens Airbnb pricing project."""
+import json
+
 import numpy as np
 import pandas as pd
 
 ACROPOLIS = (37.9715, 23.7257)
 SYNTAGMA = (37.9755, 23.7348)
 
-# Columns calculated from price. Using them as features would leak the answer.
+# Columns that are the price, or are calculated from it. Never used as features.
 LEAKY_COLUMNS = [
     "estimated_revenue_l365d",
-    "price_quote_checkin_date", "price_quote_checkout_date",
     "price_quote_total_price", "price_quote_price_per_night", "price_quote_raw",
 ]
 
@@ -32,8 +33,35 @@ def clean_price(series: pd.Series) -> pd.Series:
     )
 
 
+def parse_quote(raw) -> dict:
+    """Pull the pre-discount subtotal and discount out of the quote JSON."""
+    try:
+        q = json.loads(raw)["quote"]
+        return {"nightly_subtotal": float(q.get("nightly_subtotal") or np.nan),
+                "discount_amount": float(q.get("discount_amount") or 0)}
+    except (TypeError, ValueError, KeyError):
+        return {"nightly_subtotal": np.nan, "discount_amount": np.nan}
+
+
+def add_targets(df: pd.DataFrame) -> pd.DataFrame:
+    """Two targets for the same quote.
+
+    price_quoted: what Airbnb showed per night, after any length-of-stay discount.
+    price_list:   the host's nightly rate before that discount (subtotal / nights).
+    """
+    out = df.copy()
+    out["price_quoted"] = clean_price(out["price"])
+    q = pd.DataFrame([parse_quote(r) for r in out["price_quote_raw"]], index=out.index)
+    checkin = pd.to_datetime(out["price_quote_checkin_date"], errors="coerce")
+    checkout = pd.to_datetime(out["price_quote_checkout_date"], errors="coerce")
+    out["quote_nights"] = (checkout - checkin).dt.days
+    out["price_list"] = q["nightly_subtotal"] / out["quote_nights"]
+    out["has_discount"] = (q["discount_amount"] > 0).astype(int)
+    return out
+
+
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.drop(columns=[c for c in LEAKY_COLUMNS if c in df.columns]).copy()
+    out = df.copy()
 
     # The detailed file leaves `neighbourhood` blank; real names are in `neighbourhood_cleansed`.
     if "neighbourhood_cleansed" in out.columns:
@@ -44,8 +72,11 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     out["reviews_per_month"] = out["reviews_per_month"].fillna(0)
     out["minimum_nights"] = out["minimum_nights"].clip(upper=30)
     out["is_multi_host"] = (out["calculated_host_listings_count"] > 1).astype(int)
+    out["host_is_superhost"] = out["host_is_superhost"].map({"t": 1, "f": 0})
 
-    for col in ["host_is_superhost", "instant_bookable"]:
-        if col in out.columns:
-            out[col] = out[col].map({"t": 1, "f": 0})
-    return out
+    # Quote conditions: when the quoted stay starts and how long it is.
+    checkin = pd.to_datetime(out["price_quote_checkin_date"], errors="coerce")
+    out["lead_days"] = (checkin - pd.to_datetime(out["last_scraped"])).dt.days
+    out["checkin_month"] = checkin.dt.month
+
+    return out.drop(columns=[c for c in LEAKY_COLUMNS if c in out.columns])

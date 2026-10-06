@@ -1,64 +1,87 @@
 # What sets the price of an Athens Airbnb?
 
-A machine learning model that predicts nightly asking prices for 14,000 Athens Airbnb listings and measures how much being close to the Acropolis is worth, by room type.
+Predicting nightly rates for about 14,000 Athens Airbnb listings, and describing how rates change with distance from the Acropolis.
 
-![Acropolis premium](reports/figures/acropolis_premium.png)
+![Price gradient by distance from the Acropolis](reports/figures/acropolis_gradient.png)
 
-## Key finding
+## Key findings
 
-An entire home within 500 m of the Acropolis asks a median of **EUR 172 a night**, about **twice** the EUR 82 asked 3 to 5 km away. Most of that premium disappears in the first 1.5 km. Past 3 km, distance barely matters.
+**A steep price gradient around the Acropolis.** Entire homes within 500 m list at about **91% more** per night than comparable homes 3 to 5 km away (95% interval: 82% to 100%). That holds after adjusting for size, property type, review scores, host behaviour and quote dates. Most of the gradient is gone by 1.5 km (+26%), and past 3 km distance barely matters.
 
-Private rooms drop off even faster: from EUR 126 at 0.5 to 1 km down to about EUR 42 by 2 to 3 km.
+The raw medians (EUR 173 vs EUR 83, +108%) overstate it a little, because homes near the Acropolis are also slightly bigger and better reviewed. The adjusted curve is still an **association, not a causal effect**: views, renovation and amenities are not in the data and may differ too.
+
+**The model beats the baseline by about 30%, but not evenly.** Errors are smallest for mid-range homes (EUR 60 to 150, around 20%) and much larger at the top end (EUR 250+, around 37%).
+
+## Two price targets
+
+Each listing has one Airbnb quote, and the quotes cover different check-in dates (29 June 2026 to June 2027, though 92% fall in June and July 2026) and different stay lengths. The quoted per-night price can also include a length-of-stay discount (11.7% of listings) or taxes. So two targets are modelled side by side:
+
+- `price_list`: the host's nightly rate before discounts, taxes and fees (quote subtotal divided by nights). Closest to a hotel's BAR. **Main target.**
+- `price_quoted`: the per-night price Airbnb showed. Differs from the list rate for 20% of listings.
+
+Quote conditions (lead time, quoted nights, check-in month) are model features, so the model can tell a 1-night quote for tomorrow from a 3-night quote next spring.
 
 ## Results
 
-Test set of 2,681 listings from hosts the model never saw during training.
+5-fold cross-validation, grouped by host, on 13,998 listings. MAE in EUR, mean ± standard deviation across folds.
 
-| Model | MAE (EUR) |
-|---|---|
-| Baseline: median price for the same neighbourhood and room type | 50.29 |
-| Random Forest | **34.07** |
-| LightGBM | 34.21 |
+| Model | `price_list` | `price_quoted` |
+|---|---|---|
+| Baseline: median for same neighbourhood and room type | 50.53 ± 3.39 | 49.20 ± 3.19 |
+| Random Forest | 35.66 ± 2.52 | 34.79 ± 2.31 |
+| LightGBM | 35.53 ± 2.49 | 34.70 ± 2.31 |
 
-Both models cut the baseline error by about a third. Random Forest and LightGBM are effectively tied.
+Random Forest and LightGBM are **tied**: per fold, LightGBM is between EUR 0.42 better and EUR 0.04 worse. The two targets are also within fold-to-fold noise of each other.
 
-About 6.8% of entire homes (887 of 13,033) with 10+ reviews ask at least 40% less than the model predicts for similar listings. These are *possibly* underpriced, not proven to be.
+Error by price band (`price_list`, LightGBM, out-of-fold):
+
+| List rate (EUR) | Listings | MAE (EUR) | Mean % error |
+|---|---|---|---|
+| under 60 | 1,223 | 22.7 | 51% |
+| 60 to 100 | 5,078 | 18.3 | 23% |
+| 100 to 150 | 4,241 | 23.7 | 20% |
+| 150 to 250 | 2,350 | 49.0 | 26% |
+| 250+ | 1,106 | 145.6 | 37% |
+
+**Possibly underpriced homes.** Among 8,245 entire homes with 10+ reviews, 264 (3.2%) list at least 40% below the model's prediction, measured as `(predicted - asking) / predicted`. That means "well below similar listings", not proven lost revenue.
 
 ## Approach
 
 - **Data:** Inside Airbnb detailed listings for Athens, scraped 29 June 2026. Prices in EUR.
-- **Features:** size (guests, bedrooms, bathrooms), location (distance to the Acropolis and Syntagma, neighbourhood), quality (review scores, superhost) and host behaviour (portfolio size, availability, minimum nights).
-- **No leakage:** `estimated_revenue_l365d` and the `price_quote_*` columns are calculated from price, so they are dropped before modelling.
-- **Target:** log of nightly price, so errors are relative rather than dominated by luxury listings.
-- **Split by host:** multi-listing hosts often reuse the same price, so a random split would leak and inflate scores. Each host sits entirely in train or in test.
-- **Baseline first:** a model only counts if it beats the median price of similar listings.
+- **Features:** size (guests, bedrooms, bathrooms), location (distance to the Acropolis and Syntagma, neighbourhood), quality (review scores, superhost), host behaviour (portfolio size, availability, minimum nights) and quote conditions (lead time, nights, check-in month).
+- **No leakage:** `price_quote_price_per_night`, `price_quote_total_price`, `price_quote_raw` and `estimated_revenue_l365d` are the price or calculated from it, so they are never features. Neither is the discount flag.
+- **Log target:** errors become relative instead of being dominated by luxury listings.
+- **Grouped by host:** multi-listing hosts often reuse prices, so every host sits entirely inside one fold.
+- **Adjusted gradient:** log-linear regression on entire homes with distance bands plus controls. Intervals from 300 host-level bootstrap resamples.
 
 ## Limitations
 
-- These are **asking prices** set by hosts, not prices guests paid. The model learns what similar hosts ask, not what the market accepts.
-- One snapshot in time, so no seasonality.
-- 286 of 14,337 listings removed: 138 with no price, 148 below EUR 20 or above the 99th percentile (EUR 730).
-- Thin samples: only 23 private rooms within 500 m of the Acropolis, and only 19 hotel rooms in the test set. Treat those numbers with caution.
-- `instant_bookable` is blank for every listing in this scrape, so it is not used.
-- The underpriced check covers entire homes only. Shared and hostel rooms are priced per bed, which the model reads as a large apartment.
+- **Asking prices, not paid prices.** The model learns what similar hosts ask, not what guests accept.
+- **One quote per listing.** Mostly near-term summer dates, so this is not a seasonal model.
+- **Observed controls only.** The adjusted gradient cannot rule out unmeasured differences such as views or renovation.
+- **Weak at the extremes.** Mean error is 37% above EUR 250 and 51% below EUR 60.
+- 339 of 14,337 listings removed: 192 missing a price or quote, 147 outside EUR 20 to 732 (99th percentile of the list rate).
+- `instant_bookable` is blank for every listing in this scrape.
 
 ## Run it
 
 ```bash
 git clone https://github.com/georgegiannakidis/athens-airbnb-pricing.git
 cd athens-airbnb-pricing
-python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-# download data/listings.csv as described in data/README.md
 jupyter notebook notebooks/01_athens_price_model.ipynb
 ```
+
+Download `data/listings.csv` first, as described in `data/README.md`.
 
 ## Structure
 
 ```
 data/            listings.csv goes here (not committed)
 notebooks/       the full analysis, with outputs
-src/features.py  cleaning, feature and leakage helpers
+src/features.py  targets, features and leakage guard
 reports/figures/ charts used in this README
 ```
 
