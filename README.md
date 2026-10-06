@@ -1,5 +1,9 @@
 # What sets the price of an Athens Airbnb?
 
+[![tests](https://github.com/georgegiannakidis/athens-airbnb-pricing/actions/workflows/tests.yml/badge.svg)](https://github.com/georgegiannakidis/athens-airbnb-pricing/actions/workflows/tests.yml)
+
+**[Try the live estimator](https://georgegiannakidis.github.io/athens-airbnb-pricing/)** · [Model card](MODEL_CARD.md) · [Data protection note](DATA_PROTECTION.md)
+
 Predicting nightly rates for about 14,000 Athens Airbnb listings, and describing how rates change with distance from the Acropolis.
 
 ![Price gradient by distance from the Acropolis](reports/figures/acropolis_gradient.png)
@@ -47,6 +51,15 @@ Error by price band (`price_list`, LightGBM, out-of-fold):
 
 **Possibly underpriced homes.** Among 8,245 entire homes with 10+ reviews, 279 (3.4%) list at least 40% below the model's prediction, measured as `(predicted - asking) / predicted`. That means "well below similar listings", not proven lost revenue.
 
+## Live estimator
+
+[`docs/index.html`](docs/index.html) is a single static page: pick a spot on a map of Athens, describe the home, and get an estimated pre-discount nightly rate. The model runs in the browser, so there is no server and no data leaves the page.
+
+- It uses a smaller LightGBM trained only on inputs a visitor can set (location, room type, guests, bedrooms, bathrooms, rating, superhost). Grouped 5-fold CV MAE: EUR 35.62 ± 2.69, close to the main model.
+- The browser predictions match Python's to within 0.001% on a held-out check.
+- The map shows 500 m grid cells with at least 5 homes each. Single listings are never published (see the [data protection note](DATA_PROTECTION.md)).
+- Rebuild with `python scripts/export_demo.py && python scripts/build_demo_page.py`.
+
 ## Approach
 
 - **Data:** Inside Airbnb detailed listings for Athens, scraped 29 June 2026. Prices in EUR.
@@ -78,13 +91,20 @@ jupyter notebook notebooks/01_athens_price_model.ipynb
 
 Download `data/listings.csv` first, as described in `data/README.md`.
 
+Run the tests with `pytest`. They use synthetic data, so no download is needed.
+
 ## Structure
 
 ```
-data/            listings.csv goes here (not committed)
-notebooks/       the full analysis, with outputs
-src/features.py  targets, features and leakage guard
-reports/figures/ charts used in this README
+data/              listings.csv goes here (not committed)
+notebooks/         the full analysis, with outputs
+src/features.py    targets, features and leakage guard
+tests/             unit tests, including one that fails if a price column leaks
+scripts/           notebook builder, demo model export, demo page builder
+docs/              the live estimator (GitHub Pages)
+reports/figures/   charts used in this README
+MODEL_CARD.md      intended use, limits, evaluation
+DATA_PROTECTION.md how personal data in the source is handled
 ```
 
 ## Data source and credit
