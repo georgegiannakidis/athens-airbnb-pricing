@@ -40,13 +40,16 @@ def make_model():
                          min_child_samples=20, random_state=SEED, verbose=-1)
 
 
-def cv_mae(df):
+def cv_errors(df):
+    """Grouped 5-fold CV. Returns fold MAE stats and out-of-fold actual/predicted ratios."""
     X, y = df[FEATURES], np.log1p(df["price_list"].values)
-    errs = []
+    errs, oof = [], np.zeros(len(df))
     for tr, te in GroupKFold(n_splits=5).split(X, y, df["host_id"]):
         pred = np.expm1(make_model().fit(X.iloc[tr], y[tr]).predict(X.iloc[te]))
+        oof[te] = pred
         errs.append(np.mean(np.abs(pred - df["price_list"].values[te])))
-    return float(np.mean(errs)), float(np.std(errs))
+    ratio = df["price_list"].values / oof
+    return float(np.mean(errs)), float(np.std(errs)), ratio
 
 
 def flatten(node, feats, thr, left, right, leaf):
@@ -84,13 +87,18 @@ def grid(df):
 
 def main():
     df = load()
-    mae, sd = cv_mae(df)
+    mae, sd, ratio = cv_errors(df)
+    q = lambda p: round(float(np.quantile(ratio, p)), 3)
+    mdape = float(np.median(np.abs(ratio - 1)))
     model = make_model().fit(df[FEATURES], np.log1p(df["price_list"].values))
     out = {
         "features": FEATURES, "rooms": ROOMS, "acropolis": ACROPOLIS,
         "cell": [CELL_LAT, CELL_LON], "min_per_cell": MIN_PER_CELL,
         "grid": grid(df), "trees": export_trees(model),
         "cv_mae": round(mae, 2), "cv_mae_sd": round(sd, 2), "n_train": len(df),
+        # Out-of-fold actual/predicted ratios: scale the prediction to get a range.
+        "ratio_q": {"p10": q(0.10), "p25": q(0.25), "p75": q(0.75), "p90": q(0.90)},
+        "mdape": round(mdape, 3),
         "defaults": {"review_scores_rating": round(float(df["review_scores_rating"].median()), 2)},
         "scraped": "29 June 2026",
     }
@@ -101,7 +109,8 @@ def main():
     sample[FEATURES].assign(pred=np.expm1(model.predict(sample[FEATURES]))).to_json(
         ROOT / "docs" / ".check.json", orient="records")
     print(f"rows {len(df)} | demo CV MAE {mae:.2f} +/- {sd:.2f} | cells {len(out['grid'])} "
-          f"| trees {len(out['trees'])} | {path.stat().st_size/1e6:.2f} MB")
+          f"| ratio p25-p75 {out['ratio_q']['p25']}-{out['ratio_q']['p75']} p10-p90 {out['ratio_q']['p10']}-{out['ratio_q']['p90']} "
+          f"| median abs % error {mdape:.1%} | trees {len(out['trees'])} | {path.stat().st_size/1e6:.2f} MB")
 
 
 if __name__ == "__main__":

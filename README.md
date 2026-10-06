@@ -55,7 +55,7 @@ Error by price band (`price_list`, LightGBM, out-of-fold):
 
 [`docs/index.html`](docs/index.html) is a single static page: pick a spot on a map of Athens, describe the home, and get an estimated pre-discount nightly rate. The model runs in the browser, so there is no server and no data leaves the page.
 
-- It uses a smaller LightGBM trained only on inputs a visitor can set (location, room type, guests, bedrooms, bathrooms, rating, superhost). Grouped 5-fold CV MAE: EUR 35.62 ± 2.69, close to the main model.
+- It uses a smaller LightGBM trained only on inputs a visitor can set (location, room type, guests, bedrooms, bathrooms, rating, superhost). Grouped 5-fold CV MAE: EUR 35.62 ± 2.69, close to the main model. The median miss is about 20% of the asking price, so the page shows a price-scaled range (where half, and 8 in 10, of comparable homes ask) instead of a flat ± euro figure.
 - The browser predictions match Python's to within 0.001% on a held-out check.
 - The map shows 500 m grid cells with at least 5 homes each. Single listings are never published (see the [data protection note](DATA_PROTECTION.md)).
 - Rebuild with `python scripts/export_demo.py && python scripts/build_demo_page.py`.

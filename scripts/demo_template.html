@@ -94,6 +94,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <span class="lbl">Estimated list rate per night</span>
         <div class="price"><span id="price">€0</span><small>/ night</small></div>
         <div class="range" id="range"></div>
+        <div class="range" id="range80"></div>
         <div class="where" id="where"></div>
       </section>
 
@@ -113,7 +114,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   </div>
 
   <section class="notes">
-    <div><h2>How it works</h2><p>A LightGBM model trained on __NTRAIN__ Athens entire homes and private rooms runs in your browser. Grouped by host, five-fold cross-validation gives a mean absolute error of €__MAE__ ± __MAESD__, so read the range above as typical error, not a guarantee.</p></div>
+    <div><h2>How it works</h2><p>A LightGBM model trained on __NTRAIN__ Athens entire homes and private rooms runs in your browser. Tested on hosts it never saw (five-fold cross-validation grouped by host), its typical miss is about __MDAPE__% of the asking price. The ranges above come from those misses, scaled to your estimate. Hosts with identical homes often ask different prices, so some spread is unavoidable.</p></div>
     <div><h2>What it is not</h2><p>Asking prices, not booked prices. One summer snapshot, so no seasonality. Location effects are associations, not causes. Very cheap and very expensive homes are predicted least well.</p></div>
     <div><h2>Source and code</h2><p>Data: <a href="https://insideairbnb.com/" target="_blank" rel="noopener">Inside Airbnb</a>, CC BY 4.0. Analysis, model card and data protection note: <a href="https://github.com/georgegiannakidis/athens-airbnb-pricing" target="_blank" rel="noopener">github.com/georgegiannakidis/athens-airbnb-pricing</a>. Built by George Giannakidis.</p></div>
   </section>
@@ -180,7 +181,9 @@ function render(){
   document.getElementById("o-rating").textContent=state.review_scores_rating.toFixed(2);
   const p=Math.expm1(predictLog(features()));
   document.getElementById("price").textContent="€"+Math.round(p);
-  document.getElementById("range").textContent=`typical error ±€${Math.round(M.cv_mae)} · roughly €${Math.max(0,Math.round(p-M.cv_mae))} to €${Math.round(p+M.cv_mae)}`;
+  const R=M.ratio_q;
+  document.getElementById("range").textContent=`Half of comparable homes ask €${Math.round(p*R.p25)} to €${Math.round(p*R.p75)}`;
+  document.getElementById("range80").textContent=`Most (8 in 10) ask €${Math.round(p*R.p10)} to €${Math.round(p*R.p90)}`;
   const d=km(state.lat,state.lon);
   const inside=state.lat>=minLat&&state.lat<=maxLat&&state.lon>=minLon&&state.lon<=maxLon;
   document.getElementById("where").innerHTML=`<b>${d.toFixed(1)} km</b> from the Acropolis`+(d>8?" · far outside most listings, treat with caution":"");
