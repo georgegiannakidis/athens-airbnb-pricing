@@ -2,112 +2,47 @@
 
 [![tests](https://github.com/georgegiannakidis/athens-airbnb-pricing/actions/workflows/tests.yml/badge.svg)](https://github.com/georgegiannakidis/athens-airbnb-pricing/actions/workflows/tests.yml)
 
-**[Try the live estimator](https://georgegiannakidis.github.io/athens-airbnb-pricing/)** · [Model card](MODEL_CARD.md) · [Data protection note](DATA_PROTECTION.md)
+**[Try the live estimator](https://georgegiannakidis.github.io/athens-airbnb-pricing/)** · [Model card](MODEL_CARD.md) · [Data protection note](DATA_PROTECTION.md) · [Methods](METHODS.md)
 
-> Homes within 500 m of the Acropolis ask **77% to 92% more** per night than comparable homes 3 to 5 km away. This project measures that premium on about 14,000 Athens listings, compares standard machine learning models under leakage-safe validation, and documents the work the way an auditor would expect to find it.
+> Airbnb homes within 500 m of the Acropolis ask **77% to 92% more** per night than similar homes 3 to 5 km away.
 
-## What this project demonstrates
+## In plain words
 
-- **Governance before modelling.** A GDPR [data protection note](DATA_PROTECTION.md) and a [model card](MODEL_CARD.md) that states what the model must not be used for.
-- **Controls that are tested, not just described.** A leakage guard with a unit test that fails the build if a price column slips into the features, run by CI on every push to main.
-- **Privacy by design.** The live estimator runs entirely in the browser, and its map shows only aggregated 500 m cells with at least 5 homes, never a single listing.
-- **Honest results.** About 30% better than a simple baseline, with error broken down by price band and one unsolved weakness documented rather than hidden.
+I used public data on about 14,000 Airbnb homes in Athens to answer one question: how much does being close to the Acropolis add to the nightly price?
 
-## Scope
-
-- **The question is about location, not season.** The interest is how asking prices change with distance from a demand driver (the Acropolis), holding size, quality and host behaviour constant. Time of year is not the subject. Quote dates are kept only as controls, so a summer quote is not mistaken for a location premium.
-- **The models are deliberately standard.** The goal is a fair comparison of well-known tabular models (a median baseline, Random Forest and LightGBM) under the same leakage-safe validation. There is no deep learning and no hyperparameter search; both models use fixed, common settings.
+To keep the comparison fair, I compared homes that are alike in size, type and guest reviews. I also trained standard machine learning models to predict a home's price, and measured how close they get.
 
 ![Price gradient by distance from the Acropolis](reports/figures/acropolis_gradient.png)
 
-## Key findings
+## What I found
 
-**A steep price gradient around the Acropolis.** Entire homes within 500 m have a pre-discount nightly rate roughly **77% to 92% higher** than homes 3 to 5 km away, across the adjusted specifications tested. In the main specification, which adjusts for size, property type, review scores, host behaviour and quote dates, the estimate is +91%. Most of the gradient is gone by 1.5 km (about +25%), and past 3 km distance barely matters.
+1. **Location matters a lot, but only up close.** Within 500 m of the Acropolis, prices are 77% to 92% higher. At 1.5 km the extra is about 25%. Beyond 3 km, distance hardly matters.
+2. **The models are useful, not perfect.** They are about 30% more accurate than a simple guess (the typical price for the same neighbourhood and room type). On average they miss by about EUR 35 a night.
+3. **Two standard models tied.** Random Forest and LightGBM gave almost the same results.
+4. **Very cheap and very expensive homes are hard to predict.** Under EUR 60 a night, the model guesses too high, and I have not found the reason yet.
 
-How sure is that number? The 82% to 100% band on the chart only covers sampling noise *within that one regression*. Refitting with other controls and price cutoffs gives **+77% to +92%** across the adjusted specifications. The regression with no controls gives +108%, matching the raw medians. The estimate is most sensitive to the top price cutoff: excluding homes above EUR 302 (the 95th percentile of the already trimmed homes, about 6% of eligible entire homes before trimming) lowers it to +77%. So the most expensive homes near the Acropolis account for part of the gap. This is an **association, not a causal effect**. Views, renovation and amenities are not fully captured, although a rough amenities count barely moves the estimate (+92%).
+This shows a link between location and price. It does not prove that location is the cause. Views or renovations, which the data does not capture, may also play a part.
 
-**The model beats the baseline by about 30%, but not evenly.** Errors are smallest for mid-range homes (EUR 60 to 150, around 20%) and much larger at the extremes. Below EUR 60 the model over-predicts 97% of entire rental units and condos. Some of that is expected: any model pulls extreme prices toward typical values, and these listings were selected *for* having low prices. The model systematically over-predicts this segment; the cause remains unclear. Property type does not explain it.
+## How I kept it honest and safe
 
-## Two price targets
+- **Fair testing.** Each model is always tested on homes it has never seen. All homes from the same host stay together, so the model cannot copy one host's prices from training into testing.
+- **No peeking at the answer.** An automatic test fails the build if the price, or anything calculated from it, gets into the model's inputs.
+- **Privacy.** Public host data is still personal data under GDPR. I used no names, photos or profile text, and the public map shows only areas with 5 or more homes, never a single home. See the [data protection note](DATA_PROTECTION.md).
+- **Clear limits.** The [model card](MODEL_CARD.md) says what the model should and should not be used for.
 
-Each listing has one Airbnb quote, and the quotes cover different check-in dates (29 June 2026 to June 2027, though 92% fall in June and July 2026) and different stay lengths. The quoted per-night price can also include taxes, or an explicit discount (11.7% of listings). Most discounts are labelled "Special offer" (1,313 line items). Only 305 are stay-length discounts (long, weekly or monthly), and 98 are early-booking discounts. So two targets are modelled side by side:
+## Try it
 
-- `price_list`: the **pre-discount nightly quote rate**, i.e. the quote subtotal divided by nights, before explicit discounts, taxes and fees. **Main target.**
-- `price_quoted`: the per-night price Airbnb showed. Differs from the list rate for 20% of listings.
+Open the [live estimator](https://georgegiannakidis.github.io/athens-airbnb-pricing/). Pick a spot on the map, describe a home, and get an estimated nightly price. It runs entirely in your browser, so nothing you enter is sent anywhere.
 
-Quote conditions (lead time, quoted nights, check-in month) are included as controls, not as a research question, so the model can tell a 1-night quote for tomorrow from a 3-night quote next spring.
+## What this project is, and is not
 
-## Features, ground truth and validation
+- **About location, not season.** Most price quotes are for June and July 2026, and dates are used only as a background control.
+- **About asking prices, not paid prices.** The data shows what hosts ask, not what guests actually paid.
+- **Standard models on purpose.** No deep learning and no tuning, so the comparison between models stays simple and fair.
 
-**Ground truth.** The target is `price_list`, the pre-discount nightly quote rate in EUR (quote subtotal divided by nights). `price_quoted` is reported alongside it as a check. Both are modelled on a log scale and converted back to euros before errors are measured.
+## For technical readers
 
-**Features (19 numeric, 3 categorical):**
-
-| Group | Features |
-|---|---|
-| Location | distance to the Acropolis (km), distance to Syntagma (km), neighbourhood |
-| Size | guests (`accommodates`), bedrooms, beds, bathrooms |
-| Property | room type, property type (types with fewer than 30 listings grouped as "Other") |
-| Quality | review score (overall), review score (location), number of reviews, reviews in the last 12 months, reviews per month, superhost |
-| Host behaviour | host's listing count, multi-listing host flag, availability over 365 days, minimum nights (capped at 30) |
-| Quote conditions (controls) | lead time in days, quoted nights, check-in month |
-
-Never used as features: the price itself, anything calculated from it (`price_quote_*`, `estimated_revenue_l365d`), the discount flag, host names or profile text, and `host_id` (used only to build the folds).
-
-**Train and test split.** There is no single train/test split. The data is split into 5 folds with `GroupKFold`, grouped by host. Each model is trained 5 times on about 80% of listings and tested on the remaining 20%, so every listing is tested exactly once, by a model that never saw it or any other listing from the same host. Results are the mean and standard deviation across the 5 folds.
-
-## Results
-
-5-fold cross-validation, grouped by host, on 13,998 listings. MAE in EUR, mean ± standard deviation across folds.
-
-| Model | `price_list` | `price_quoted` |
-|---|---|---|
-| Baseline: median for same neighbourhood and room type | 50.53 ± 3.39 | 49.20 ± 3.19 |
-| Random Forest | 35.55 ± 2.50 | 34.77 ± 2.28 |
-| LightGBM | 35.49 ± 2.55 | 34.62 ± 2.39 |
-
-Random Forest and LightGBM are **tied**: per fold, LightGBM is between EUR 0.70 better and EUR 0.34 worse on `price_list`. The two targets are also within fold-to-fold noise of each other.
-
-Adding `property_type` (42 types, rare ones grouped) helps only slightly: Random Forest improves in every fold, by EUR 0.04 to 0.19. LightGBM changes by between -0.32 and +0.15.
-
-Error by price band (`price_list`, LightGBM, out-of-fold):
-
-| List rate (EUR) | Listings | MAE (EUR) | Mean % error |
-|---|---|---|---|
-| under 60 | 1,223 | 22.5 | 50% |
-| 60 to 100 | 5,078 | 18.1 | 23% |
-| 100 to 150 | 4,241 | 24.1 | 20% |
-| 150 to 250 | 2,350 | 49.0 | 26% |
-| 250+ | 1,106 | 144.6 | 37% |
-
-**Possibly underpriced homes.** Among 8,245 entire homes with 10+ reviews, 279 (3.4%) list at least 40% below the model's prediction, measured as `(predicted - asking) / predicted`. That means "well below similar listings", not proven lost revenue.
-
-## Live estimator
-
-[`docs/index.html`](docs/index.html) is a single static page: pick a spot on a map of Athens, describe the home, and get an estimated pre-discount nightly rate. The model runs in the browser, so there is no server and no data leaves the page.
-
-- It uses a smaller LightGBM trained only on inputs a visitor can set (location, room type, guests, bedrooms, bathrooms, rating, superhost). Grouped 5-fold CV MAE: EUR 35.62 ± 2.69, close to the main model. The median miss is about 20% of the asking price, so the page shows a price-scaled range (where half, and 8 in 10, of comparable homes ask) instead of a flat ± euro figure.
-- The browser predictions match Python's to within 0.001% on a held-out check.
-- The map shows 500 m grid cells with at least 5 homes each. Single listings are never published (see the [data protection note](DATA_PROTECTION.md)).
-- Rebuild with `python scripts/export_demo.py && python scripts/build_demo_page.py`.
-
-## Approach
-
-- **Data:** Inside Airbnb detailed listings for Athens, scraped 29 June 2026. Prices in EUR.
-- **Features:** property type, size (guests, bedrooms, bathrooms), location (distance to the Acropolis and Syntagma, neighbourhood), quality (review scores, superhost), host behaviour (portfolio size, availability, minimum nights) and quote conditions (lead time, nights, check-in month).
-- **No leakage:** `price_quote_price_per_night`, `price_quote_total_price`, `price_quote_raw` and `estimated_revenue_l365d` are the price or calculated from it, so they are never features. Neither is the discount flag.
-- **Log target:** errors become relative instead of being dominated by luxury listings.
-- **Grouped by host:** multi-listing hosts often reuse prices, so every host sits entirely inside one fold.
-- **Adjusted gradient:** log-linear regression on entire homes with distance bands plus controls. Intervals from 300 host-level bootstrap resamples. Robustness: refit with no controls, size only, the main controls, main plus amenities count, and three alternative price cutoffs. The cutoff variants use percentiles of the already trimmed homes.
-
-## Limitations
-
-- **Asking prices, not paid prices.** The model learns what similar hosts ask, not what guests accept.
-- **One quote per listing.** Mostly near-term summer dates, so this is not a seasonal model.
-- **Observed controls only.** The adjusted gradient cannot rule out unmeasured differences such as views or renovation, and the bootstrap interval does not cover the choice of specification.
-- **Weak at the extremes.** Mean error is 37% above EUR 250 and 50% below EUR 60, where the model systematically over-predicts for reasons not yet identified.
-- 339 of 14,337 listings removed: 192 missing a price or quote, 147 outside EUR 20 to 732 (99th percentile of the list rate).
-- `instant_bookable` is blank for every listing in this scrape.
+[METHODS.md](METHODS.md) has the full detail: the two price targets, all 22 features, the 5-fold grouped validation, results tables, error by price band, the robustness checks and the full list of limitations.
 
 ## Run it
 
@@ -134,6 +69,7 @@ tests/             unit tests, including one that fails if a price column leaks
 scripts/           notebook builder, demo model export, demo page builder
 docs/              the live estimator (GitHub Pages)
 reports/figures/   charts used in this README
+METHODS.md         full method, features, validation and results
 MODEL_CARD.md      intended use, limits, evaluation
 DATA_PROTECTION.md how personal data in the source is handled
 ```
