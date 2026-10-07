@@ -82,10 +82,10 @@ Data from [Inside Airbnb](https://insideairbnb.com/), shared under a Creative Co
 
 I designed this project and built it with Claude, Anthropic's AI assistant, as my coding partner.
 
-- **My part:** the idea and the research question, the project architecture, and the design decisions: what to measure, which models to compare, how to test them fairly, and how to handle personal data. I also reviewed the results.
+- **My part:** the idea and the research question, the project architecture, and the design decisions: what to measure, which models to compare, how to test them fairly, and how to handle personal data.
 - **Claude's part:** writing most of the code, running the analysis, and drafting the documentation, following my direction.
 
-Working this way is a skill I am building on purpose. I treated the AI like a capable team member: I set the scope and the controls, and I checked the output.
+Working this way is a skill I am building on purpose. I treated the AI like a capable team member: I set the scope, the design and the controls it had to work within.
 
 ## About me
 
