@@ -341,9 +341,16 @@ homes = df[(df["room_type"] == "Entire home/apt") & (df["number_of_reviews"] >= 
 for cut in [20, 30, 40]:
     n = (homes["below_pred_pct"] > cut).sum()
     print(f"{cut}%+ below prediction: {n} of {len(homes)} ({n/len(homes):.1%})")
-# No listing IDs: this table labels listings, and IDs would point at identifiable hosts.
-cols = ["neighbourhood", "property_type", "price_list", "predicted_list", "below_pred_pct", "accommodates", "number_of_reviews"]
-homes.sort_values("below_pred_pct", ascending=False)[cols].head(10).round({"price_list": 0, "predicted_list": 0, "below_pred_pct": 1})
+# Aggregates only. Single listings are never shown: neighbourhood, type and exact price
+# together can point at an identifiable host (see DATA_PROTECTION.md).
+# Neighbourhoods with fewer than 5 flagged homes are merged, like the demo map's 5-home rule.
+flag = homes[homes["below_pred_pct"] > 40]
+counts = flag["neighbourhood"].value_counts()
+area = flag["neighbourhood"].where(flag["neighbourhood"].map(counts) >= 5, "Other (fewer than 5 each)")
+(flag.assign(area=area).groupby("area")
+     .agg(flagged=("price_list", "size"), median_asking=("price_list", "median"),
+          median_predicted=("predicted_list", "median"))
+     .sort_values("flagged", ascending=False).round(0))
 """)
 nb=nbf.v4.new_notebook(); nb.cells=C
 nb.metadata["kernelspec"]={"name":"python3","display_name":"Python 3","language":"python"}

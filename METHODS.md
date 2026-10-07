@@ -8,7 +8,7 @@ This page holds the technical detail behind the [README](README.md). The full an
 
 How sure is that number? The 82% to 100% band on the chart only covers sampling noise *within that one regression*. Refitting with other controls and price cutoffs gives **+77% to +92%** across the adjusted specifications. The regression with no controls gives +108%, matching the raw medians. The estimate is most sensitive to the top price cutoff: excluding homes above EUR 302 (the 95th percentile of the already trimmed homes, about 6% of eligible entire homes before trimming) lowers it to +77%. So the most expensive homes near the Acropolis account for part of the gap. This is an **association, not a causal effect**. Views, renovation and amenities are not fully captured, although a rough amenities count barely moves the estimate (+92%).
 
-**The model beats the baseline by about 30%, but not evenly.** Errors are smallest for mid-range homes (EUR 60 to 150, around 20%) and much larger at the extremes. Below EUR 60 the model over-predicts 97% of entire rental units and condos. Some of that is expected: any model pulls extreme prices toward typical values, and these listings were selected *for* having low prices. The model systematically over-predicts this segment; the cause remains unclear. Property type does not explain it.
+**The model beats the baseline by about 30%, but not evenly.** Errors are smallest for mid-range homes (EUR 60 to 150, around 20%) and much larger at the extremes. Below EUR 60 the model over-predicts 98% of entire rental units and condos. Some of that is expected: any model pulls extreme prices toward typical values, and these listings were selected *for* having low prices. The model systematically over-predicts this segment; the cause remains unclear. Property type does not explain it.
 
 ## Two price targets
 
@@ -44,25 +44,25 @@ Never used as features: the price itself, anything calculated from it (`price_qu
 
 | Model | `price_list` | `price_quoted` |
 |---|---|---|
-| Baseline: median for same neighbourhood and room type | 50.53 ± 3.39 | 49.20 ± 3.19 |
-| Random Forest | 35.55 ± 2.50 | 34.77 ± 2.28 |
-| LightGBM | 35.49 ± 2.55 | 34.62 ± 2.39 |
+| Baseline: median for same neighbourhood and room type | 50.19 ± 2.74 | 48.84 ± 2.70 |
+| Random Forest | 35.49 ± 2.19 | 34.67 ± 2.20 |
+| LightGBM | 35.10 ± 1.96 | 34.35 ± 2.17 |
 
-Random Forest and LightGBM are **tied**: per fold, LightGBM is between EUR 0.70 better and EUR 0.34 worse on `price_list`. The two targets are also within fold-to-fold noise of each other.
+Random Forest and LightGBM are **practically tied**: on `price_list` LightGBM is EUR 0.40 better on average, ranging per fold from EUR 0.84 better to EUR 0.07 worse. That gap is small next to the EUR 2 spread between folds. The two targets are also within fold-to-fold noise of each other.
 
-Adding `property_type` (42 types, rare ones grouped) helps only slightly: Random Forest improves in every fold, by EUR 0.04 to 0.19. LightGBM changes by between -0.32 and +0.15.
+Adding `property_type` (42 types, rare ones grouped) barely matters: per fold, Random Forest's error changes by between EUR -0.13 and +0.05, and LightGBM's by between -0.27 and +0.13.
 
 Error by price band (`price_list`, LightGBM, out-of-fold):
 
 | List rate (EUR) | Listings | MAE (EUR) | Mean % error |
 |---|---|---|---|
-| under 60 | 1,223 | 22.5 | 50% |
-| 60 to 100 | 5,078 | 18.1 | 23% |
-| 100 to 150 | 4,241 | 24.1 | 20% |
-| 150 to 250 | 2,350 | 49.0 | 26% |
-| 250+ | 1,106 | 144.6 | 37% |
+| under 60 | 1,223 | 21.9 | 49% |
+| 60 to 100 | 5,078 | 17.8 | 22% |
+| 100 to 150 | 4,241 | 23.6 | 19% |
+| 150 to 250 | 2,350 | 48.3 | 25% |
+| 250+ | 1,106 | 145.0 | 37% |
 
-**Possibly underpriced homes.** Among 8,245 entire homes with 10+ reviews, 279 (3.4%) list at least 40% below the model's prediction, measured as `(predicted - asking) / predicted`. That means "well below similar listings", not proven lost revenue.
+**Possibly underpriced homes.** Among 8,245 entire homes with 10+ reviews, 250 (3.0%) list at least 40% below the model's prediction, measured as `(predicted - asking) / predicted`. That means "well below similar listings", not proven lost revenue. The notebook reports them only as counts and medians by neighbourhood, with neighbourhoods under 5 flagged homes merged. Single listings are never shown.
 
 ## Live estimator
 
@@ -80,7 +80,7 @@ Error by price band (`price_list`, LightGBM, out-of-fold):
   | 250+ | 643 | 42% | 73% |
 
   Ranges are close to their stated coverage in the mid-range and somewhat too narrow for higher estimates. By true asking price, coverage is much lower at the extremes (24% of homes under EUR 60 fall in the typical range), because the model pulls extreme prices toward typical values.
-- Demo numbers above come from a regeneration on 7 October 2026. Fold assignment can differ slightly across platforms, so a rerun elsewhere may shift the MAE by a few cents.
+- All numbers on this page come from a full rerun on 7 October 2026. Which hosts land in which fold can differ slightly across platforms, so a rerun elsewhere may shift model errors by a few tenths of a euro. The Acropolis gradient does not depend on the folds and is unchanged.
 - The browser predictions match Python's to within 0.001% on a held-out check.
 - The map shows 500 m grid cells with at least 5 homes each. Single listings are never published (see the [data protection note](DATA_PROTECTION.md)).
 - Rebuild with `python scripts/export_demo.py && python scripts/build_demo_page.py`.
@@ -98,6 +98,6 @@ Error by price band (`price_list`, LightGBM, out-of-fold):
 - **Asking prices, not paid prices.** The model learns what similar hosts ask, not what guests accept.
 - **One quote per listing.** Mostly near-term summer dates, so this is not a seasonal model.
 - **Observed controls only.** The adjusted gradient cannot rule out unmeasured differences such as views or renovation, and the bootstrap interval does not cover the choice of specification.
-- **Weak at the extremes.** Mean error is 37% above EUR 250 and 50% below EUR 60, where the model systematically over-predicts for reasons not yet identified.
+- **Weak at the extremes.** Mean error is 37% above EUR 250 and 49% below EUR 60, where the model systematically over-predicts for reasons not yet identified.
 - 339 of 14,337 listings removed: 192 missing a price or quote, 147 outside EUR 20 to 732 (99th percentile of the list rate).
 - `instant_bookable` is blank for every listing in this scrape.

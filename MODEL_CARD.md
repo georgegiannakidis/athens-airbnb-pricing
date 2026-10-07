@@ -38,9 +38,9 @@ LightGBM and Random Forest on log price, 19 numeric and 3 categorical features (
 
 | Model | MAE on `price_list` (EUR, mean ± sd over folds) |
 |---|---|
-| Baseline: median of same neighbourhood and room type | 50.53 ± 3.39 |
-| Random Forest | 35.55 ± 2.50 |
-| LightGBM | 35.49 ± 2.55 |
+| Baseline: median of same neighbourhood and room type | 50.19 ± 2.74 |
+| Random Forest | 35.49 ± 2.19 |
+| LightGBM | 35.10 ± 1.96 |
 
 The two models are statistically tied.
 

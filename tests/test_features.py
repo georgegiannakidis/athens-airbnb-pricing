@@ -148,3 +148,21 @@ def test_notebook_builder_and_notebook_use_the_same_inputs():
     nb = notebook_lists()
     for name in ["NUMERIC", "CATEGORICAL", "BASE_CATEGORICAL"]:
         assert builder[name] == nb[name], name
+
+
+def test_notebook_outputs_show_no_single_listings():
+    """Published notebook outputs must not identify listings or hosts (see DATA_PROTECTION.md)."""
+    import re
+    nb = json.loads((ROOT / "notebooks" / "01_athens_price_model.ipynb").read_text())
+    parts = []
+    for cell in nb["cells"]:
+        for out in cell.get("outputs", []):
+            parts.append("".join(out.get("text", "")))
+            for kind in ["text/plain", "text/html"]:
+                parts.append("".join(out.get("data", {}).get(kind, "")))
+    text = "\n".join(parts)
+    assert not re.search(r"airbnb\.[a-z.]+/(rooms|users)", text), "listing or host URL in outputs"
+    assert "muscache.com" not in text, "photo URL in outputs"
+    for col in ["host_name", "host_about", "listing_url", "picture_url", "below_pred_pct"]:
+        assert col not in text, f"{col} column shown in outputs"
+    assert not re.search(r"\b\d{8,19}\b", text), "listing-ID-like number in outputs"

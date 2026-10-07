@@ -15,7 +15,7 @@ Listing coordinates are already shifted by Airbnb by up to about 150 m, which lo
 | Host name, about text, photos, profile links | No | Never read into features or outputs |
 | `host_id` | Yes, internally | Only to group validation folds, so one host's listings never sit in both train and test |
 | Listing coordinates | Yes | Converted to distances; the public demo shows only aggregated grid cells, never single listings |
-| Listing IDs | No public use | Removed from published outputs, including the "possibly underpriced" table |
+| Listing IDs and single-listing rows | No public use | Published outputs show only aggregates. The "possibly underpriced" result is reported as counts and medians by neighbourhood, with groups under 5 homes merged |
 | Reviews file | No | Not downloaded |
 
 ## Principles applied (GDPR Article 5)
@@ -29,6 +29,10 @@ Listing coordinates are already shifted by Airbnb by up to about 150 m, which lo
 
 - **Lawful basis:** legitimate interests (Article 6(1)(f)): non-commercial, statistical analysis with low impact on hosts, using data they chose to publish.
 - **Transparency:** hosts cannot practically be contacted individually. Article 14(5)(b) allows an exception where informing each person "would involve a disproportionate effort", in particular for statistical purposes, as long as safeguards are applied and the information is made publicly available. This note and the repository are that public information.
+
+## History
+
+Early private drafts of the analysis notebook displayed a few individual listings, including listing IDs. Before the repository was made public, that output was replaced with aggregates and the git history was rewritten so no earlier version contains it.
 
 ## Source terms
 

@@ -18,3 +18,19 @@ docs/.check.json
 
 # Social media assets, kept local
 linkedin/
+
+# Secrets and credentials, never committed
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+credentials*.json
+service-account*.json
+secrets.*
+*.secret
+.netrc
