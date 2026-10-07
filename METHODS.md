@@ -68,7 +68,19 @@ Error by price band (`price_list`, LightGBM, out-of-fold):
 
 [`docs/index.html`](docs/index.html) is a single static page: pick a spot on a map of Athens, describe the home, and get an estimated pre-discount nightly rate. The model runs in the browser, so there is no server and no data leaves the page.
 
-- It uses a smaller LightGBM trained only on inputs a visitor can set (location, room type, guests, bedrooms, bathrooms, rating, superhost). Grouped 5-fold CV MAE: EUR 35.62 ± 2.69, close to the main model. The median miss is about 20% of the asking price, so the page shows a price-scaled range (where half, and 8 in 10, of comparable homes ask) instead of a flat ± euro figure.
+- It uses a smaller LightGBM trained only on inputs a visitor can set (location, room type, guests, bedrooms, bathrooms, rating, superhost). Grouped 5-fold CV MAE: EUR 35.77 ± 1.44, close to the main model. The median miss is about 21% of the asking price, measured as `|predicted - asking| / asking`.
+- Instead of a flat ± euro figure, the page scales the estimate by the spread of out-of-fold `asking / predicted` ratios: a typical range (25th to 75th percentile) and a wider range (10th to 90th). These ratios are pooled over all test homes, so the 50% and 80% shares hold on average, not for every kind of home. Coverage by the estimate shown to the visitor:
+
+  | Estimated rate (EUR) | Homes | Inside typical range | Inside wider range |
+  |---|---|---|---|
+  | under 60 | 308 | 45% | 79% |
+  | 60 to 100 | 5,700 | 53% | 83% |
+  | 100 to 150 | 5,094 | 50% | 80% |
+  | 150 to 250 | 2,133 | 45% | 73% |
+  | 250+ | 643 | 42% | 73% |
+
+  Ranges are close to their stated coverage in the mid-range and somewhat too narrow for higher estimates. By true asking price, coverage is much lower at the extremes (24% of homes under EUR 60 fall in the typical range), because the model pulls extreme prices toward typical values.
+- Demo numbers above come from a regeneration on 7 October 2026. Fold assignment can differ slightly across platforms, so a rerun elsewhere may shift the MAE by a few cents.
 - The browser predictions match Python's to within 0.001% on a held-out check.
 - The map shows 500 m grid cells with at least 5 homes each. Single listings are never published (see the [data protection note](DATA_PROTECTION.md)).
 - Rebuild with `python scripts/export_demo.py && python scripts/build_demo_page.py`.
@@ -76,7 +88,7 @@ Error by price band (`price_list`, LightGBM, out-of-fold):
 ## Approach
 
 - **Data:** Inside Airbnb detailed listings for Athens, scraped 29 June 2026. Prices in EUR.
-- **No leakage:** `price_quote_price_per_night`, `price_quote_total_price`, `price_quote_raw` and `estimated_revenue_l365d` are the price or calculated from it, so they are never features. Neither is the discount flag.
+- **No leakage:** `price_quote_price_per_night`, `price_quote_total_price`, `price_quote_raw` and `estimated_revenue_l365d` are the price or calculated from it, so they are never features. Neither are the two targets or the discount flag. `check_inputs()` in `src/features.py` stops the demo training if a forbidden column is in its input list, and the tests read the actual input lists from the notebook and the demo script and fail if any of them contains a price, target, discount or ID column.
 - **Log target:** errors become relative instead of being dominated by luxury listings.
 - **Grouped by host:** multi-listing hosts often reuse prices, so every host sits entirely inside one fold.
 - **Adjusted gradient:** log-linear regression on entire homes with distance bands plus controls. Intervals from 300 host-level bootstrap resamples. Robustness: refit with no controls, size only, the main controls, main plus amenities count, and three alternative price cutoffs. The cutoff variants use percentiles of the already trimmed homes.

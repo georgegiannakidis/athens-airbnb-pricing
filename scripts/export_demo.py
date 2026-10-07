@@ -15,7 +15,7 @@ from sklearn.model_selection import GroupKFold
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from src.features import ACROPOLIS, add_features, add_targets  # noqa: E402
+from src.features import ACROPOLIS, add_features, add_targets, check_inputs  # noqa: E402
 
 FEATURES = ["latitude", "longitude", "km_acropolis", "room_code", "accommodates",
             "bedrooms", "bathrooms", "review_scores_rating", "host_is_superhost"]
@@ -42,6 +42,7 @@ def make_model():
 
 def cv_errors(df):
     """Grouped 5-fold CV. Returns fold MAE stats and out-of-fold actual/predicted ratios."""
+    check_inputs(FEATURES)
     X, y = df[FEATURES], np.log1p(df["price_list"].values)
     errs, oof = [], np.zeros(len(df))
     for tr, te in GroupKFold(n_splits=5).split(X, y, df["host_id"]):
@@ -89,14 +90,16 @@ def main():
     df = load()
     mae, sd, ratio = cv_errors(df)
     q = lambda p: round(float(np.quantile(ratio, p)), 3)
-    mdape = float(np.median(np.abs(ratio - 1)))
+    # Median miss as a share of the ASKING price: |pred - actual| / actual = |1/ratio - 1|.
+    mdape = float(np.median(np.abs(1 / ratio - 1)))
     model = make_model().fit(df[FEATURES], np.log1p(df["price_list"].values))
     out = {
         "features": FEATURES, "rooms": ROOMS, "acropolis": ACROPOLIS,
         "cell": [CELL_LAT, CELL_LON], "min_per_cell": MIN_PER_CELL,
         "grid": grid(df), "trees": export_trees(model),
         "cv_mae": round(mae, 2), "cv_mae_sd": round(sd, 2), "n_train": len(df),
-        # Out-of-fold actual/predicted ratios: scale the prediction to get a range.
+        # Out-of-fold actual/predicted ratios, pooled over ALL test homes. Scaling an
+        # estimate by these gives a guide range; coverage varies by price and area.
         "ratio_q": {"p10": q(0.10), "p25": q(0.25), "p75": q(0.75), "p90": q(0.90)},
         "mdape": round(mdape, 3),
         "defaults": {"review_scores_rating": round(float(df["review_scores_rating"].median()), 2)},

@@ -26,7 +26,7 @@ This shows a link between location and price. It does not prove that location is
 ## How I kept it honest and safe
 
 - **Fair testing.** Each model is always tested on homes it has never seen. All homes from the same host stay together, so the model cannot copy one host's prices from training into testing.
-- **No peeking at the answer.** An automatic test fails the build if the price, or anything calculated from it, gets into the model's inputs.
+- **No peeking at the answer.** Automatic tests check the list of inputs each model is trained on. The build fails if the price, or any column known to be calculated from it, is on that list.
 - **Privacy.** Public host data is still personal data under GDPR. I used no names, photos or profile text, and the public map shows only areas with 5 or more homes, never a single home. See the [data protection note](DATA_PROTECTION.md).
 - **Clear limits.** The [model card](MODEL_CARD.md) says what the model should and should not be used for.
 
@@ -65,7 +65,7 @@ Run the tests with `pytest`. They use synthetic data, so no download is needed.
 data/              listings.csv goes here (not committed)
 notebooks/         the full analysis, with outputs
 src/features.py    targets, features and leakage guard
-tests/             unit tests, including one that fails if a price column leaks
+tests/             unit tests, including checks that no price, target or discount column is a model input
 scripts/           notebook builder, demo model export, demo page builder
 docs/              the live estimator (GitHub Pages)
 reports/figures/   charts used in this README

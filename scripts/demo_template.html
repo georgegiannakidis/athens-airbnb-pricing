@@ -114,7 +114,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   </div>
 
   <section class="notes">
-    <div><h2>How it works</h2><p>A LightGBM model trained on __NTRAIN__ Athens entire homes and private rooms runs in your browser. Tested on hosts it never saw (five-fold cross-validation grouped by host), its typical miss is about __MDAPE__% of the asking price. The ranges above come from those misses, scaled to your estimate. Hosts with identical homes often ask different prices, so some spread is unavoidable.</p></div>
+    <div><h2>How it works</h2><p>A LightGBM model trained on __NTRAIN__ Athens entire homes and private rooms runs in your browser. Tested on hosts it never saw (five-fold cross-validation grouped by host), its median miss is about __MDAPE__% of the asking price. The ranges above apply the spread of those misses, measured across all test homes together, to your estimate. In testing, half of all homes fell inside the typical range and 8 in 10 inside the wider one. For any one kind of home the true spread can be wider or narrower, and it is widest for very cheap and very expensive homes. Hosts with identical homes often ask different prices, so some spread is unavoidable.</p></div>
     <div><h2>What it is not</h2><p>Asking prices, not booked prices. One summer snapshot, so no seasonality. Location effects are associations, not causes. Very cheap and very expensive homes are predicted least well.</p></div>
     <div><h2>Source and code</h2><p>Data: <a href="https://insideairbnb.com/" target="_blank" rel="noopener">Inside Airbnb</a>, CC BY 4.0. Analysis, model card and data protection note: <a href="https://github.com/georgegiannakidis/athens-airbnb-pricing" target="_blank" rel="noopener">github.com/georgegiannakidis/athens-airbnb-pricing</a>. Built by George Giannakidis.</p></div>
   </section>
@@ -182,8 +182,8 @@ function render(){
   const p=Math.expm1(predictLog(features()));
   document.getElementById("price").textContent="€"+Math.round(p);
   const R=M.ratio_q;
-  document.getElementById("range").textContent=`Half of comparable homes ask €${Math.round(p*R.p25)} to €${Math.round(p*R.p75)}`;
-  document.getElementById("range80").textContent=`Most (8 in 10) ask €${Math.round(p*R.p10)} to €${Math.round(p*R.p90)}`;
+  document.getElementById("range").textContent=`Typical range €${Math.round(p*R.p25)} to €${Math.round(p*R.p75)}`;
+  document.getElementById("range80").textContent=`Wider range €${Math.round(p*R.p10)} to €${Math.round(p*R.p90)} · based on overall test errors`;
   const d=km(state.lat,state.lon);
   const inside=state.lat>=minLat&&state.lat<=maxLat&&state.lon>=minLon&&state.lon<=maxLon;
   document.getElementById("where").innerHTML=`<b>${d.toFixed(1)} km</b> from the Acropolis`+(d>8?" · far outside most listings, treat with caution":"");

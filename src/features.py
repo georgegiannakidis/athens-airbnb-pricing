@@ -13,6 +13,32 @@ LEAKY_COLUMNS = [
     "price_quote_total_price", "price_quote_price_per_night", "price_quote_raw",
 ]
 
+# The two prediction targets. They must never be model inputs either.
+TARGETS = ["price_list", "price_quoted"]
+
+# Everything that is the answer, part of it, or an identifier. Never a model input.
+FORBIDDEN_INPUTS = set(LEAKY_COLUMNS) | set(TARGETS) | {
+    "price", "has_discount", "nightly_subtotal", "discount_amount", "host_id", "id",
+}
+
+
+def leaked_inputs(columns) -> list:
+    """Return the names in `columns` that must never be used as model inputs.
+
+    Catches the explicit list above plus anything named like a price
+    (``price*``) or a revenue estimate (``estimated_revenue*``).
+    """
+    return sorted(c for c in columns
+                  if c in FORBIDDEN_INPUTS or c.startswith("price")
+                  or c.startswith("estimated_revenue"))
+
+
+def check_inputs(columns) -> None:
+    """Stop training if any forbidden column is in the model's input list."""
+    bad = leaked_inputs(columns)
+    if bad:
+        raise ValueError(f"forbidden model inputs: {bad}")
+
 
 def haversine_km(lat, lon, point):
     """Great-circle distance in km from each (lat, lon) to a fixed point."""

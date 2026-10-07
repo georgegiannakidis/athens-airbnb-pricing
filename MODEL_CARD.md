@@ -30,7 +30,7 @@ It answers "what do comparable listings ask?" It does **not** answer "what will 
 
 ## Model
 
-LightGBM and Random Forest on log price, 19 numeric and 3 categorical features (room type, neighbourhood, grouped property type). Price-derived columns are removed by a guard in `src/features.py`, and a unit test checks that guard.
+LightGBM and Random Forest on log price, 19 numeric and 3 categorical features (room type, neighbourhood, grouped property type). Price-derived columns are removed by a guard in `src/features.py`. Unit tests also read the input lists actually used for training (in the notebook and the demo script) and fail if any contains a price, target, discount or ID column.
 
 ## Evaluation
 
