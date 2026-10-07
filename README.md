@@ -1,10 +1,17 @@
-# What sets the price of an Athens Airbnb?
+# The Acropolis premium in Athens Airbnb prices
 
 [![tests](https://github.com/georgegiannakidis/athens-airbnb-pricing/actions/workflows/tests.yml/badge.svg)](https://github.com/georgegiannakidis/athens-airbnb-pricing/actions/workflows/tests.yml)
 
 **[Try the live estimator](https://georgegiannakidis.github.io/athens-airbnb-pricing/)** · [Model card](MODEL_CARD.md) · [Data protection note](DATA_PROTECTION.md)
 
-How much does being close to a major demand driver, the Acropolis, add to the nightly rate of an Athens Airbnb? This project measures that price gradient on about 14,000 listings and uses the same data to compare standard machine learning models.
+> Homes within 500 m of the Acropolis ask **77% to 92% more** per night than comparable homes 3 to 5 km away. This project measures that premium on about 14,000 Athens listings, compares standard machine learning models under leakage-safe validation, and documents the work the way an auditor would expect to find it.
+
+## What this project demonstrates
+
+- **Governance before modelling.** A GDPR [data protection note](DATA_PROTECTION.md) and a [model card](MODEL_CARD.md) that states what the model must not be used for.
+- **Controls that are tested, not just described.** A leakage guard with a unit test that fails the build if a price column slips into the features, run by CI on every push to main.
+- **Privacy by design.** The live estimator runs entirely in the browser, and its map shows only aggregated 500 m cells with at least 5 homes, never a single listing.
+- **Honest results.** About 30% better than a simple baseline, with error broken down by price band and one unsolved weakness documented rather than hidden.
 
 ## Scope
 
@@ -29,6 +36,25 @@ Each listing has one Airbnb quote, and the quotes cover different check-in dates
 - `price_quoted`: the per-night price Airbnb showed. Differs from the list rate for 20% of listings.
 
 Quote conditions (lead time, quoted nights, check-in month) are included as controls, not as a research question, so the model can tell a 1-night quote for tomorrow from a 3-night quote next spring.
+
+## Features, ground truth and validation
+
+**Ground truth.** The target is `price_list`, the pre-discount nightly quote rate in EUR (quote subtotal divided by nights). `price_quoted` is reported alongside it as a check. Both are modelled on a log scale and converted back to euros before errors are measured.
+
+**Features (19 numeric, 3 categorical):**
+
+| Group | Features |
+|---|---|
+| Location | distance to the Acropolis (km), distance to Syntagma (km), neighbourhood |
+| Size | guests (`accommodates`), bedrooms, beds, bathrooms |
+| Property | room type, property type (types with fewer than 30 listings grouped as "Other") |
+| Quality | review score (overall), review score (location), number of reviews, reviews in the last 12 months, reviews per month, superhost |
+| Host behaviour | host's listing count, multi-listing host flag, availability over 365 days, minimum nights (capped at 30) |
+| Quote conditions (controls) | lead time in days, quoted nights, check-in month |
+
+Never used as features: the price itself, anything calculated from it (`price_quote_*`, `estimated_revenue_l365d`), the discount flag, host names or profile text, and `host_id` (used only to build the folds).
+
+**Train and test split.** There is no single train/test split. The data is split into 5 folds with `GroupKFold`, grouped by host. Each model is trained 5 times on about 80% of listings and tested on the remaining 20%, so every listing is tested exactly once, by a model that never saw it or any other listing from the same host. Results are the mean and standard deviation across the 5 folds.
 
 ## Results
 
@@ -118,4 +144,6 @@ Data from [Inside Airbnb](https://insideairbnb.com/), shared under a Creative Co
 
 ## About me
 
-Built by George Giannakidis. Ten years in hotel distribution technology at WebHotelier, now doing an MS in Computer Science at the University of Hartford.
+Built by George Giannakidis. Ten years in hotel distribution technology at WebHotelier, now doing an MS in Computer Science (cybersecurity concentration) at the University of Hartford, working toward GRC and IT audit.
+
+Feedback on the data protection note or the model card is welcome. Open an issue or reach out on LinkedIn.
