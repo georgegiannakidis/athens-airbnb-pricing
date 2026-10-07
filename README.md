@@ -4,7 +4,12 @@
 
 **[Try the live estimator](https://georgegiannakidis.github.io/athens-airbnb-pricing/)** · [Model card](MODEL_CARD.md) · [Data protection note](DATA_PROTECTION.md)
 
-Predicting nightly rates for about 14,000 Athens Airbnb listings, and describing how rates change with distance from the Acropolis.
+How much does being close to a major demand driver, the Acropolis, add to the nightly rate of an Athens Airbnb? This project measures that price gradient on about 14,000 listings and uses the same data to compare standard machine learning models.
+
+## Scope
+
+- **The question is about location, not season.** The interest is how asking prices change with distance from a demand driver (the Acropolis), holding size, quality and host behaviour constant. Time of year is not the subject. Quote dates are kept only as controls, so a summer quote is not mistaken for a location premium.
+- **The models are deliberately standard.** The goal is a fair comparison of well-known tabular models (a median baseline, Random Forest and LightGBM) under the same leakage-safe validation. There is no deep learning and no hyperparameter search; both models use fixed, common settings.
 
 ![Price gradient by distance from the Acropolis](reports/figures/acropolis_gradient.png)
 
@@ -23,7 +28,7 @@ Each listing has one Airbnb quote, and the quotes cover different check-in dates
 - `price_list`: the **pre-discount nightly quote rate**, i.e. the quote subtotal divided by nights, before explicit discounts, taxes and fees. **Main target.**
 - `price_quoted`: the per-night price Airbnb showed. Differs from the list rate for 20% of listings.
 
-Quote conditions (lead time, quoted nights, check-in month) are model features, so the model can tell a 1-night quote for tomorrow from a 3-night quote next spring.
+Quote conditions (lead time, quoted nights, check-in month) are included as controls, not as a research question, so the model can tell a 1-night quote for tomorrow from a 3-night quote next spring.
 
 ## Results
 
