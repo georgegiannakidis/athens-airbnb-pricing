@@ -1,6 +1,6 @@
 # Data
 
-This project uses the Athens summary listings file from Inside Airbnb.
+This project uses the Athens detailed listings file from Inside Airbnb (`listings.csv.gz`, not the summary `listings.csv`).
 
 1. Go to https://insideairbnb.com/get-the-data/
 2. Find Athens (Attica, Greece).
